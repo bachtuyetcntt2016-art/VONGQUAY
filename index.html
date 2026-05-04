@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vòng Quay May Mắn - Fullscreen Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <style>
+        :root { --bg-gradient: radial-gradient(circle, #1a237e 0%, #000000 100%); --modal-bg: rgba(0, 0, 0, 0.95); }
+        /* Force body to fit screen exactly */
+        body { font-family: 'Roboto', sans-serif; background: var(--bg-gradient); color: white; height: 100vh; width: 100vw; overflow: hidden; transition: background 1s ease; display: flex; flex-direction: column; }
+        
+        /* Themes */
+        .theme-tet { --bg-gradient: linear-gradient(135deg, #ff0000 0%, #990000 100%); }
+        .theme-xmas { --bg-gradient: radial-gradient(circle, #165b33 0%, #0b3d20 100%); }
+        .theme-universe { --bg-gradient: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%); }
+        .theme-ocean { --bg-gradient: linear-gradient(to bottom, #006994, #003366); }
+        .theme-ai { --bg-gradient: linear-gradient(45deg, #0f0c29, #302b63, #24243e); }
+        
+        /* Effects */
+        .arrow-down { width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 30px solid #fbbf24; position: absolute; top: -5px; left: 50%; transform: translateX(-50%); z-index: 10; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
+        .spotlight-overlay { position: fixed; inset: 0; background: radial-gradient(circle at center, transparent 150px, rgba(0, 0, 0, 0.95) 250px); z-index: 60; opacity: 0; pointer-events: none; transition: opacity 0.8s ease-in-out; }
+        .spotlight-active { opacity: 1; pointer-events: auto; }
+        .modal { background: var(--modal-bg); backdrop-filter: blur(8px); z-index: 80; }
+        
+        /* UI Elements */
+        .btn-glass { background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)); box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); transition: all 0.2s; }
+        .btn-glass:hover { transform: scale(1.05); background: linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1)); }
+        
+        .question-card { background: linear-gradient(145deg, #10b981, #059669); color: white; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); height: 35px; width: 35px; position: relative; z-index: 100; }
+        .question-card:hover { transform: translateY(-2px) scale(1.1); background: linear-gradient(145deg, #34d399, #10b981); }
+        .question-card.active { background: white; color: #059669; transform: scale(1.1); border-color: #10b981; }
+        .question-card.viewing-now { border: 2px solid #fbbf24 !important; box-shadow: 0 0 10px #fbbf24; transform: scale(1.1); z-index: 110; }
+        .question-card.disabled { background: linear-gradient(145deg, #374151, #1f2937) !important; color: #6b7280 !important; cursor: not-allowed; opacity: 0.6; transform: none !important; border-color: #374151; pointer-events: none; }
+        
+        .mc-option { background: rgba(31, 41, 55, 0.8); border: 2px solid #374151; border-radius: 12px; padding: 10px 14px; cursor: pointer; transition: all 0.2s; text-align: left; font-size: 1rem; color: #e5e7eb; position: relative; display: flex; align-items: center; }
+        .mc-option:hover { border-color: #60a5fa; background: rgba(55, 65, 81, 0.9); }
+        .mc-correct { background: linear-gradient(145deg, #059669, #047857) !important; border-color: #34d399 !important; color: white !important; }
+        .mc-wrong { background: linear-gradient(145deg, #dc2626, #b91c1c) !important; border-color: #f87171 !important; color: white !important; }
+        
+        .winner-text { animation: pulse-gold 1.5s infinite; text-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+        .theme-btn { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid white; transition: transform 0.2s; }
+        .theme-btn:hover { transform: scale(1.2); }
+        .theme-btn.active { box-shadow: 0 0 8px white; transform: scale(1.1); }
+        
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+        .timer-bar { height: 100%; background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444); width: 100%; transition: width 0.1s linear; }
+        
+        /* Toast */
+        #toast { visibility: hidden; min-width: 200px; transform: translateX(-50%); background-color: #333; color: #fff; text-align: center; border-radius: 50px; padding: 12px; position: fixed; z-index: 100; left: 50%; bottom: 30px; font-size: 14px; opacity: 0; transition: opacity 0.5s, bottom 0.5s; box-shadow: 0 5px 15px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); }
+        #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        
+        /* Modal Scroll Fix */
+        .modal-content-wrapper { display: flex; flex-direction: column; max-height: 90vh; overflow: hidden; }
+        .modal-body-scroll { overflow-y: auto; flex: 1; padding-right: 5px; }
+    </style>
+</head>
+<body class="p-2">
+
+    <canvas id="bg-canvas"></canvas>
+    <div id="spotlight" class="spotlight-overlay"></div>
+    
+    <!-- Compact Header -->
+    <div class="text-center z-10 w-full flex-none mb-1">
+        <h1 class="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-white to-yellow-300 tracking-wider drop-shadow-[0_2px_5px_rgba(255,255,255,0.3)] uppercase mb-2">VÒNG QUAY MAY MẮN</h1>
+        <div class="flex justify-center gap-2 bg-black/40 p-1.5 rounded-full inline-block backdrop-blur-sm border border-white/10">
+            <button class="theme-btn active" style="background: #1a237e" onclick="setTheme('default')" title="Mặc định"></button>
+            <button class="theme-btn" style="background: #990000" onclick="setTheme('tet')" title="Tết"></button>
+            <button class="theme-btn" style="background: #0b3d20" onclick="setTheme('xmas')" title="Noel"></button>
+            <button class="theme-btn" style="background: #000000" onclick="setTheme('universe')" title="Vũ Trụ"></button>
+            <button class="theme-btn" style="background: #006994" onclick="setTheme('ocean')" title="Biển"></button>
+            <button class="theme-btn" style="background: linear-gradient(45deg, #00f, #f0f)" onclick="setTheme('ai')" title="AI"></button>
+        </div>
+    </div>
+
+    <!-- Main Content (Auto-resize) -->
+    <div class="flex-1 flex flex-col lg:flex-row gap-4 items-center justify-center w-full max-w-7xl mx-auto overflow-hidden p-2">
+        
+        <!-- Wheel Section (Responsive Height) -->
+        <div class="relative group h-[50vh] lg:h-[80vh] aspect-square flex-shrink-0 transition-transform">
+            <div class="arrow-down"></div>
+            <!-- Canvas is managed via JS, styled to fit container -->
+            <canvas id="wheelCanvas" width="550" height="550" class="w-full h-full object-contain rounded-full cursor-pointer shadow-[0_0_30px_rgba(0,0,0,0.5)]"></canvas>
+            
+            <!-- CLICKABLE STAR -->
+            <div onclick="spin()" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[15%] h-[15%] bg-gradient-to-br from-yellow-300 to-orange-500 rounded-full shadow-[0_0_20px_rgba(255,215,0,0.6)] flex items-center justify-center border-[3px] border-white cursor-pointer z-20 hover:scale-110 transition-transform active:scale-95" title="Nhấn để quay!">
+                <span class="text-xl md:text-3xl animate-pulse">★</span>
+            </div>
+        </div>
+
+        <!-- Controls Section (Responsive Height) -->
+        <div class="w-full max-w-md bg-gray-900/80 p-4 rounded-xl border border-white/10 shadow-2xl backdrop-blur-md flex flex-col h-[40vh] lg:h-[80vh]">
+            <!-- Stats Header -->
+            <div class="flex justify-between items-center mb-2 pb-2 border-b border-gray-700 flex-none">
+                <h2 class="text-lg font-bold text-blue-300 flex items-center gap-2"><span>📋</span> Danh Sách</h2>
+                <div class="flex gap-1">
+                    <button onclick="openScoreboard()" class="text-[10px] bg-yellow-600 hover:bg-yellow-500 text-white font-bold px-2 py-1 rounded-full shadow transition">🏆 BXH</button>
+                    <span class="text-[10px] text-yellow-400 font-bold border border-yellow-500/50 px-2 py-1 rounded-full flex items-center" id="spinCounter">Lượt: 0</span>
+                    <span class="text-[10px] bg-blue-900 text-blue-200 px-2 py-1 rounded-full" id="studentCount">0 em</span>
+                </div>
+            </div>
+
+            <!-- Student List (Flex Grow) -->
+            <textarea id="studentListInput" class="flex-grow bg-gray-800/50 text-white p-2 rounded-lg border border-gray-600 focus:border-blue-400 text-xs md:text-sm mb-2 resize-none font-mono focus:outline-none focus:ring-1 focus:ring-blue-500 transition" placeholder="Nhập tên học sinh...">
+Nguyễn Cao Khánh An
+Nguyễn Ngọc Khánh An
+Nguyễn Trần Xuân An
+Trần Ngọc Nhã Bân
+Lê Hoàng Chương
+Phan Tấn Đạt
+Nguyễn Lê Ngọc Đức
+Mai Thị Ngọc Hân
+Trang Phúc Hậu
+Nguyễn Xuân Huy
+Lê Trần Anh Khoa
+Nguyễn Lê Đăng Khoa
+Phan Trần Anh Khoa
+Hồ Quang Khôi
+Lê Trần Đăng Khôi
+Trần Thị Mỹ Linh
+Trương Minh Lộc
+Lê Phạm Kim Ngân
+Nguyễn Ngọc Gia Nghi
+Võ Khôi Nguyên
+Đỗ Ngọc Nhật
+Đặng Thị Tuyết Nhung
+Dương Phạm Hoàng Phúc
+Trần Hoàng Phúc
+Trần Kim Phụng
+Uông Đỗ Hoàng Quyên
+Võ Hoàng Thảo Sương
+Lê Thị Mỹ Tâm
+Mai Võ Kiều Tấn
+Kiều Thị Mai Thảo
+Nguyễn Phúc Thiện
+Trần Minh Thư
+Trần Thiên Thư
+Võ Thị Minh Thư
+Trần Phan Huyền Trân
+Đặng Ngọc Phương Trinh
+Dương Thanh Trúc
+Trần Anh Tuấn
+Trần Thanh Tuấn
+Võ Trường Vũ
+Lê Võ Thảo Vy
+Nguyễn Phạm Quỳnh Vy
+</textarea>
+
+            <!-- Mode & Actions (Flex None) -->
+            <div class="space-y-2 flex-none">
+                <div class="relative">
+                    <select id="questionTypeSelect" onchange="handleModeChange()" class="appearance-none bg-gray-800 border border-gray-600 text-white text-xs md:text-sm rounded-lg block w-full p-2 pr-8 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-bold cursor-pointer transition">
+                        <option value="mc">✅ PHẦN 1: TRẮC NGHIỆM</option>
+                        <option value="essay">📝 PHẦN 2: TỰ LUẬN</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+                        <svg class="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="openQuestionModal()" class="btn-glass text-gray-200 font-bold py-1.5 px-2 rounded-lg text-[10px] md:text-xs flex items-center justify-center gap-1 hover:text-blue-300">⚙️ Sửa Câu Hỏi</button>
+                    <button onclick="openRiggingModal()" class="btn-glass text-purple-200 font-bold py-1.5 px-2 rounded-lg text-[10px] md:text-xs flex items-center justify-center gap-1 hover:text-purple-300">🛠️ Cài Đặt</button>
+                </div>
+
+                <div class="grid grid-cols-12 gap-2">
+                    <button onclick="updateWheel(true)" class="col-span-4 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg transition shadow flex items-center justify-center text-sm" title="Cập nhật danh sách">🔄</button>
+                    <button onclick="spin()" id="spinBtn" class="col-span-8 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white font-bold py-2 rounded-lg uppercase tracking-wider shadow transform hover:scale-[1.02] transition active:scale-95 flex items-center justify-center gap-2 text-sm">
+                        <span>QUAY NGAY</span> 🎲
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between px-1">
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="checkbox" id="soundToggle" checked class="w-3 h-3 accent-blue-500 rounded cursor-pointer">
+                        <span class="text-gray-400 text-[10px] group-hover:text-white transition">Âm thanh</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="checkbox" id="removeWinnerToggle" checked class="w-3 h-3 accent-red-500 rounded cursor-pointer">
+                        <span class="text-gray-400 text-[10px] group-hover:text-white transition">Xóa người thắng</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast">Thông báo</div>
+
+    <!-- RESULT MODAL (FIXED SCROLL) -->
+    <div id="resultModal" class="modal fixed inset-0 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-gradient-to-b from-gray-900 to-black p-1 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] max-w-4xl w-11/12 transform scale-90 transition-transform duration-300 z-50 flex flex-col h-auto max-h-[95vh]" id="modalContent">
+            <!-- Modal Body Wrapper with Flex column to prevent main scroll -->
+            <div class="bg-gray-900 rounded-[20px] p-4 text-center border border-white/10 modal-content-wrapper h-full">
+                
+                <!-- Winner Info (Flexible but compact) -->
+                <div class="flex-none mb-2">
+                    <div class="animate-bounce text-5xl mb-1" id="winnerAvatar">🏆</div>
+                    <h2 class="text-sm md:text-base text-blue-300 mb-0 uppercase tracking-widest font-bold">NGƯỜI ĐƯỢC CHỌN</h2>
+                    <h3 id="winnerName" class="text-2xl md:text-3xl font-black winner-text mb-1 break-words leading-tight">Nguyễn Văn A</h3>
+                    <p id="winnerScore" class="text-green-400 font-bold text-sm bg-green-900/30 px-3 py-0.5 rounded-full border border-green-500/30 inline-block">Điểm: 0</p>
+                </div>
+                
+                <!-- Question Section (Flexible Height) -->
+                <div class="w-full bg-gray-800/50 p-3 rounded-xl border border-gray-700 backdrop-blur-sm transition-all duration-500 flex flex-col flex-1 overflow-hidden">
+                    
+                    <!-- Question Selector (Grid) -->
+                    <div id="questionSelectionArea" class="w-full flex-none">
+                        <h4 id="questionTitle" class="text-sm font-bold text-yellow-400 mb-2 flex items-center justify-center gap-2">
+                            <span>❓</span> <span id="modeTitle">Chọn thử thách</span>
+                        </h4>
+                        <div class="max-h-[60px] overflow-y-auto mb-2 p-1 custom-scrollbar">
+                            <div id="questionButtons" class="flex flex-wrap justify-center gap-1.5"></div>
+                        </div>
+                    </div>
+
+                    <!-- Question Display (Active) - SCROLLABLE INTERNAL -->
+                    <div id="questionDisplayContainer" class="hidden animate-fade-in-up w-full flex-col flex-1 overflow-hidden">
+                        <div class="bg-white text-gray-900 p-4 rounded-lg relative shadow-inner border-4 border-gray-200 h-full flex flex-col">
+                            <!-- Timer Overlay -->
+                            <div id="timesUpOverlay" class="times-up-overlay absolute inset-0 bg-black/80 hidden flex items-center justify-center z-20 backdrop-blur-sm">
+                                <span class="text-red-500 font-black text-4xl uppercase drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-pulse">Hết giờ! ⏰</span>
+                            </div>
+                            
+                            <div id="timerSection" class="w-full mb-3 flex-none">
+                                <div class="flex justify-between items-end mb-1">
+                                    <span class="text-xs font-bold text-gray-500 uppercase">Thời gian</span>
+                                    <div class="timer-text text-lg font-mono font-bold text-gray-800">⏱️ <span id="timeLeft">15</span>s</div>
+                                </div>
+                                <div class="w-full height-2 bg-gray-200 rounded-full overflow-hidden h-2">
+                                    <div id="timerBar" class="timer-bar rounded-full"></div>
+                                </div>
+                            </div>
+
+                            <!-- Scrollable Content Area -->
+                            <div class="overflow-y-auto flex-1 pr-2 custom-scrollbar">
+                                <!-- Question Content -->
+                                <div id="questionText" class="text-lg md:text-xl font-bold mb-4 text-center leading-relaxed text-gray-800"></div>
+                                
+                                <!-- MC Options -->
+                                <div id="mcOptions" class="grid grid-cols-1 md:grid-cols-2 gap-2 text-white hidden pb-2"></div>
+                                
+                                <!-- Essay / Rearrange Area -->
+                                <div id="essayArea" class="hidden flex flex-col gap-3 w-full pb-2">
+                                    <!-- Manual Answer Display -->
+                                    <div id="essayAnswerContainer" class="hidden w-full p-3 bg-blue-50 rounded-lg text-blue-900 text-left border-l-4 border-blue-500 shadow-sm">
+                                        <strong class="block mb-1 text-blue-600 uppercase text-[10px] tracking-wider">💡 Đáp án gợi ý:</strong>
+                                        <div id="essayAnswerText" class="font-medium text-base leading-relaxed whitespace-pre-line"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Footer Buttons (Fixed at bottom of white box) -->
+                            <div id="essayControls" class="flex justify-center gap-2 mt-2 pt-2 border-t border-gray-200 flex-none hidden">
+                                <button onclick="toggleEssayAnswer()" id="btnShowAnswer" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-4 rounded-full shadow transition text-sm">💡 Xem Đáp Án</button>
+                                <button onclick="markEssayCorrect()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1.5 px-4 rounded-full shadow transition text-sm">✅ Đúng (+1đ)</button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Close Button (Flex None) -->
+                <div class="flex justify-center mt-3 w-full flex-none">
+                    <button onclick="closeModal()" class="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-10 rounded-full text-base shadow-[0_0_20px_rgba(234,179,8,0.4)] hover:scale-105 transition transform active:scale-95">
+                        ĐÓNG / TIẾP TỤC
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCOREBOARD MODAL -->
+    <div id="scoreboardModal" class="modal fixed inset-0 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-gray-900 rounded-2xl p-6 w-full max-w-lg border border-yellow-500/50 shadow-2xl transform scale-90 transition-transform duration-300 flex flex-col max-h-[80vh]">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-3">
+                <h3 class="text-2xl font-bold text-yellow-400 flex items-center gap-2">🏆 Bảng Thành Tích</h3>
+                <button onclick="closeScoreboard()" class="text-gray-400 hover:text-white text-xl font-bold">✕</button>
+            </div>
+            <div class="overflow-y-auto pr-2 flex-grow custom-scrollbar">
+                <table class="w-full text-left text-sm text-gray-300">
+                    <thead class="bg-gray-800 text-xs uppercase font-bold text-gray-400 sticky top-0">
+                        <tr><th class="px-4 py-3 rounded-tl-lg">Hạng</th><th class="px-4 py-3">Tên</th><th class="px-4 py-3 text-center">Đã chọn</th><th class="px-4 py-3 text-right rounded-tr-lg">Điểm</th></tr>
+                    </thead>
+                    <tbody id="scoreboardBody" class="divide-y divide-gray-700"></tbody>
+                </table>
+                <div id="emptyScoreMsg" class="text-center py-8 text-gray-500 hidden">Chưa có dữ liệu.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="manualQuestionModal" class="modal fixed inset-0 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div id="manualQuestionContent" class="bg-[#1e1e1e] rounded-xl w-[95%] max-w-7xl h-[90vh] shadow-2xl border border-gray-700 transform scale-90 transition-transform duration-300 flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center px-6 py-4 bg-[#252526] border-b border-[#333]">
+                 <div class="flex items-center gap-3"><span class="text-2xl">📝</span><h3 class="text-xl font-bold text-gray-100">Soạn Thảo Câu Hỏi</h3></div>
+                 <div class="flex items-center gap-4">
+                     <span id="questionCountBadge" class="text-xs font-mono text-gray-300 bg-[#333] px-3 py-1 rounded border border-[#444]">0 câu</span>
+                     <button onclick="closeQuestionModal()" class="text-gray-400 hover:text-white font-bold text-xl">✕</button>
+                 </div>
+            </div>
+            <div class="flex flex-1 overflow-hidden">
+                <div class="w-1/3 bg-[#252526] border-r border-[#333] flex flex-col hidden md:flex p-5 overflow-y-auto custom-scrollbar">
+                    <div class="mb-6 space-y-3">
+                        <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700 border-dashed">
+                            <label class="block text-xs font-bold text-blue-400 mb-3 uppercase tracking-wider">📂 Tải lên từ file</label>
+                            <input type="file" id="fileUploadInput" accept=".docx, .txt" class="block w-full text-xs text-gray-400 file:mr-2 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition cursor-pointer"/>
+                            <p class="text-[10px] text-gray-500 mt-2 italic">Hỗ trợ file .txt hoặc .docx</p>
+                        </div>
+                        <button onclick="downloadTemplate()" class="w-full py-3 bg-green-700 hover:bg-green-600 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition">
+                            <span>📥</span> Tải Mẫu Soạn Thảo
+                        </button>
+                    </div>
+                    <div id="manualInstruction" class="text-sm text-gray-300 space-y-4 bg-black/20 p-4 rounded-lg"></div>
+                </div>
+                <div class="flex-1 bg-[#1e1e1e] flex flex-col relative">
+                    <textarea id="manualQuestionInput" oninput="updateQuestionCount()" class="flex-1 w-full bg-[#1e1e1e] text-[#d4d4d4] p-6 focus:outline-none resize-none font-mono text-sm leading-7 custom-scrollbar" placeholder="Nhập câu hỏi..."></textarea>
+                    <div class="absolute bottom-4 right-6 text-xs text-gray-500 pointer-events-none">Tự động lưu khi bấm Cập nhật</div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-[#252526] border-t border-[#333] flex justify-end gap-3">
+                <button onclick="closeQuestionModal()" class="px-6 py-2 rounded-lg border border-[#444] text-gray-300 hover:text-white hover:bg-[#333] transition">Đóng</button>
+                <button onclick="saveManualQuestions()" class="px-8 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg transition">Lưu & Cập Nhật</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIG MODAL -->
+    <div id="riggingModal" class="modal fixed inset-0 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-gray-900 rounded-2xl p-6 w-full max-w-lg border border-purple-500/50 shadow-2xl transform scale-90 transition-transform duration-300">
+            <h3 class="text-2xl font-bold text-purple-400 mb-6 flex items-center gap-2"><span>🛠️</span> Cài đặt nâng cao</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-400 text-xs font-bold mb-2 uppercase">⏱️ Thời gian suy nghĩ (giây)</label>
+                    <input type="number" id="questionTimeInput" class="w-full bg-gray-800 text-white p-3 rounded-lg border border-gray-700 focus:border-purple-500 focus:outline-none text-lg font-bold text-center" value="15">
+                </div>
+                <div>
+                    <label class="block text-gray-400 text-xs font-bold mb-2 uppercase">🎭 Kịch bản Quay (Danh sách tên ưu tiên)</label>
+                    <textarea id="riggingInput" class="w-full h-32 bg-gray-800 text-white p-3 rounded-lg border border-gray-700 focus:border-purple-500 focus:outline-none resize-none text-sm font-mono" placeholder="Nhập tên người sẽ thắng lần lượt...&#10;Ví dụ:&#10;Nguyễn Văn A&#10;* (Ngẫu nhiên)&#10;Trần Thị B"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-800">
+                <button onclick="closeRiggingModal()" class="px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 transition">Hủy</button>
+                <button onclick="saveRiggingConfig()" class="px-6 py-2 rounded-lg bg-purple-600 text-white font-bold hover:bg-purple-500 shadow-lg transition">Lưu Cài Đặt</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL VARIABLES ---
+        let startAngle = 0; 
+        let arc = 0;
+        let students = [];
+        let currentQuestions = [];
+        let isMCMode = true;
+        let spinCount = 0;
+        let riggedList = [];
+        let completedQuestions = [];
+        let currentActiveQuestionIndex = -1;
+        let currentWinner = "";
+        let studentScores = {};
+        let studentQuestionCounts = {};
+        let studentParticipation = {};
+        let questionTimeLimit = 15; 
+        let timerInterval = null;
+        let currentTheme = 'default';
+        let isSpinning = false;
+        let audioContext = null;
+
+        const themes = { 
+            'default': { colors: ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6'], bgClass: '' }, 
+            'tet': { colors: ['#ff0000', '#ffd700', '#ff0000', '#ff9900'], bgClass: 'theme-tet' }, 
+            'xmas': { colors: ['#d42426', '#165b33', '#ffffff', '#165b33'], bgClass: 'theme-xmas' }, 
+            'universe': { colors: ['#4b0082', '#000000', '#8a2be2', '#483d8b'], bgClass: 'theme-universe' }, 
+            'ocean': { colors: ['#006994', '#009dc4', '#003366', '#005f6b'], bgClass: 'theme-ocean' }, 
+            'ai': { colors: ['#00ffff', '#ff00ff', '#0000ff', '#333333'], bgClass: 'theme-ai' } 
+        };
+
+        const DEFAULT_FULL_QUESTIONS = `PHẦN 1: CÂU HỎI TRẮC NGHIỆM
+Câu 1: Nhóm nghề dịch vụ thuộc ngành CNTT bao gồm công việc nào sau đây?
+A. Lập trình trí tuệ nhân tạo.
+B. Sửa chữa, bảo trì máy tính và thiết bị ngoại vi.
+C. Sáng tác nội dung số.
+D. Quản lý dự án kinh doanh.
+Đáp án: B. Sửa chữa, bảo trì máy tính và thiết bị ngoại vi.
+Câu 2: Công việc nào sau đây giúp lấy lại dữ liệu từ các ổ cứng bị hỏng?
+A. Nâng cấp phần mềm.
+B. Cài đặt hệ điều hành.
+C. Khôi phục dữ liệu bị hỏng hay mất mát.
+D. Bảo trì thiết bị ngoại vi.
+Đáp án: C. Khôi phục dữ liệu bị hỏng hay mất mát.
+Câu 3: Theo bài học, chuyên viên dịch vụ CNTT cần có kiến thức cơ bản về đối tượng nào?
+A. Luật kinh tế.
+B. Tâm lý học khách hàng.
+C. Phần cứng máy tính và hệ điều hành.
+D. Lịch sử nghệ thuật.
+Đáp án: C. Phần cứng máy tính và hệ điều hành.
+Câu 4: Đâu là một ví dụ về thiết bị ngoại vi cần được bảo trì trong nhóm nghề dịch vụ?
+A. Bộ vi xử lý (CPU).
+B. Máy in.
+C. Bộ nhớ RAM.
+D. Bảng mạch chủ (Mainboard).
+Đáp án: B. Máy in.
+Câu 5: Công việc bảo vệ máy tính khỏi các phần mềm độc hại thuộc nhóm nghề nào?
+A. Nhóm nghề quản trị.
+B. Nhóm nghề dịch vụ CNTT.
+C. Nhóm nghề thiết kế đồ họa.
+D. Nhóm nghề sản xuất phần cứng.
+Đáp án: B. Nhóm nghề dịch vụ CNTT.
+Câu 6: Ngành học nào tập trung vào nghiên cứu và phát triển phần mềm, thuật toán?
+A. Kỹ thuật máy tính.
+B. Mạng máy tính.
+C. Khoa học máy tính.
+D. An toàn thông tin.
+Đáp án: C. Khoa học máy tính.
+
+PHẦN 2: CÂU HỎI TỰ LUẬN
+Câu 1: Hãy liệt kê ít nhất 3 nghề thuộc nhóm nghề dịch vụ trong ngành CNTT.
+Đáp án: Sửa chữa máy tính, khôi phục dữ liệu, hỗ trợ kỹ thuật
+Câu 2: Người làm việc trong nhóm nghề dịch vụ CNTT cần có những kỹ năng cơ bản nào liên quan đến thiết bị?
+Đáp án: Kỹ năng lắp ráp, sửa chữa, bảo trì máy tính
+Câu 3: Kể tên các đối tượng phần cứng mà người làm nghề dịch vụ thường xuyên tiếp xúc.
+Đáp án: Máy tính, thiết bị ngoại vi, thiết bị thông minh
+Câu 4: Chuyên viên dịch vụ CNTT cần có kiến thức cơ bản về loại phần mềm hệ thống nào?
+Đáp án: Hệ điều hành
+Câu 5: Nêu một nhiệm vụ cụ thể trong nghề sửa chữa và bảo trì máy tính.
+Đáp án: Cài đặt, bảo trì phần cứng, ổ đĩa cứng, máy in`;
+
+        // --- AUDIO SYSTEM ---
+        function initAudio() {
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playSound(type) {
+            if (!document.getElementById('soundToggle').checked) return;
+            initAudio();
+            if (audioContext.state === 'suspended') audioContext.resume();
+
+            const t = audioContext.currentTime;
+            
+            if (type === 'tick') {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(1200, t);
+                osc.frequency.exponentialRampToValueAtTime(800, t + 0.05);
+                gain.gain.setValueAtTime(0.3, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+                osc.connect(gain); gain.connect(audioContext.destination);
+                osc.start(t); osc.stop(t + 0.05);
+            } 
+            else if (type === 'whoosh') {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.frequency.setValueAtTime(200, t);
+                osc.frequency.exponentialRampToValueAtTime(1200, t + 4.0);
+                gain.gain.setValueAtTime(0.1, t);
+                gain.gain.linearRampToValueAtTime(0.1, t + 3.0);
+                gain.gain.linearRampToValueAtTime(0, t + 4.0);
+                osc.connect(gain); gain.connect(audioContext.destination);
+                osc.start(t); osc.stop(t + 4.0);
+            } 
+            else if (type === 'win') {
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
+                notes.forEach((freq, i) => {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    osc.type = i % 2 === 0 ? 'square' : 'sawtooth';
+                    osc.frequency.value = freq;
+                    const startTime = t + i * 0.06;
+                    const duration = 1.2;
+                    gain.gain.setValueAtTime(0, startTime);
+                    gain.gain.linearRampToValueAtTime(0.15, startTime + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                    osc.connect(gain); gain.connect(audioContext.destination);
+                    osc.start(startTime); osc.stop(startTime + duration);
+                });
+                const bassOsc = audioContext.createOscillator();
+                const bassGain = audioContext.createGain();
+                bassOsc.type = 'triangle'; bassOsc.frequency.value = 130.81;
+                bassGain.gain.setValueAtTime(0.3, t); bassGain.gain.linearRampToValueAtTime(0, t + 1.5);
+                bassOsc.connect(bassGain); bassGain.connect(audioContext.destination);
+                bassOsc.start(t); bassOsc.stop(t + 1.5);
+            }
+        }
+
+        // --- FILE HANDLING ---
+        document.getElementById('fileUploadInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const handleText = (text) => {
+                document.getElementById('manualQuestionInput').value = text;
+                updateQuestionCount(); 
+                showToast(`✅ Đã tải: ${file.name}`);
+            };
+
+            if (file.name.endsWith('.docx')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    mammoth.extractRawText({arrayBuffer: e.target.result})
+                        .then(r => handleText(r.value))
+                        .catch(err => { console.error(err); showToast("❌ Lỗi đọc file DOCX!"); });
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (file.name.endsWith('.txt')) {
+                const reader = new FileReader();
+                reader.onload = (e) => handleText(e.target.result);
+                reader.readAsText(file);
+            } else { showToast("⚠️ Chỉ hỗ trợ .docx hoặc .txt"); }
+        });
+
+        function downloadTemplate() {
+            const content = `PHẦN 1: CÂU HỎI TRẮC NGHIỆM\nCâu 1: Nhập câu hỏi trắc nghiệm?\nA. Lựa chọn 1\nB. Lựa chọn 2\nC. Lựa chọn 3\nD. Lựa chọn 4\nĐáp án: A\n\nPHẦN 2: CÂU HỎI TỰ LUẬN\nCâu 1: Nhập câu hỏi tự luận?\nĐáp án: Gợi ý trả lời...`;
+            const blob = new Blob([content], {type: "text/plain;charset=utf-8"});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = "mau_soan_thao.txt";
+            a.click();
+        }
+
+        // --- VISUALS ---
+        function setTheme(key) {
+            currentTheme = key;
+            document.body.className = `min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-1000 ${themes[key].bgClass}`;
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            setupBackgroundEffect(key);
+            updateWheel();
+        }
+
+        function setupBackgroundEffect(theme) {
+            const canvas = document.getElementById('bg-canvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            
+            function createParticles() {
+                particles = [];
+                for(let i=0; i<80; i++) particles.push({
+                    x: Math.random()*canvas.width, y: Math.random()*canvas.height, 
+                    r: Math.random()*3+1, s: Math.random()*0.5+0.2,
+                    c: themes[theme].colors[Math.floor(Math.random()*themes[theme].colors.length)]
+                });
+            }
+            
+            function draw() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                if (theme === 'ai') {
+                    ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)'; ctx.lineWidth = 1; ctx.beginPath();
+                    for (let i=0; i<canvas.width; i+=60) { ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); }
+                    for (let i=0; i<canvas.height; i+=60) { ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); }
+                    ctx.stroke();
+                }
+                for(let p of particles) {
+                    ctx.beginPath();
+                    ctx.fillStyle = p.c;
+                    ctx.globalAlpha = 0.6;
+                    ctx.arc(p.x,p.y,p.r,0,Math.PI*2); 
+                    ctx.fill(); 
+                    p.y -= p.s; 
+                    if(p.y < -10) { p.y = canvas.height + 10; p.x = Math.random() * canvas.width; }
+                }
+                requestAnimationFrame(draw);
+            }
+            createParticles();
+            if (window.bgAnimation) cancelAnimationFrame(window.bgAnimation);
+            window.bgAnimation = requestAnimationFrame(draw);
+        }
+        window.addEventListener('resize', ()=>{ const c=document.getElementById('bg-canvas'); c.width=window.innerWidth; c.height=window.innerHeight; });
+
+        // --- WHEEL LOGIC ---
+        function getStudents(){ return document.getElementById('studentListInput').value.trim().split('\n').map(s=>s.trim()).filter(s=>s!==''); }
+        
+        function updateWheel(reset=false){ 
+            students = getStudents(); 
+            document.getElementById('studentCount').innerText=`${students.length} em`; 
+            if(students.length>0) arc = Math.PI*2/students.length; 
+            drawWheel(); 
+            if(reset) showToast("Đã cập nhật danh sách!");
+        }
+
+        function drawWheel(){
+            const c=document.getElementById('wheelCanvas'), ctx=c.getContext('2d');
+            if(students.length===0){ ctx.clearRect(0,0,550,550); return; }
+            const cx=275, cy=275, or=260, tr=180, ir=60, cols=themes[currentTheme].colors;
+            ctx.clearRect(0,0,550,550); ctx.lineWidth=2;
+            
+            for(let i=0; i<students.length; i++){
+                const a = startAngle + i * arc;
+                ctx.fillStyle=cols[i%cols.length]; 
+                ctx.beginPath(); ctx.arc(cx,cy,or,a,a+arc); ctx.arc(cx,cy,ir,a+arc,a,true); 
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+                
+                ctx.save(); 
+                ctx.fillStyle="white"; ctx.shadowColor="black"; ctx.shadowBlur=4;
+                ctx.translate(cx+Math.cos(a+arc/2)*tr, cy+Math.sin(a+arc/2)*tr); 
+                ctx.rotate(a+arc/2+Math.PI);
+                const name = students[i];
+                const txt = name.length > 18 ? name.substring(0,17)+'...' : name;
+                ctx.font = 'bold 15px Roboto'; ctx.textAlign="center"; ctx.fillText(txt,0,5); 
+                ctx.restore();
+            }
+        }
+
+        function spin(){
+            if(isSpinning || students.length<1) { showToast("Vui lòng nhập danh sách học sinh!"); return; }
+            initAudio();
+            isSpinning=true; 
+            document.getElementById('spinBtn').disabled=true; 
+            document.getElementById('spinBtn').classList.add('opacity-50', 'cursor-not-allowed');
+            playSound('whoosh');
+            
+            spinCount++; 
+            if(document.getElementById('spinCounter')) document.getElementById('spinCounter').innerText=`Lượt: ${spinCount}`;
+            
+            let ti=-1;
+            if((spinCount-1) < riggedList.length && riggedList[spinCount-1] && riggedList[spinCount-1].trim()!=='*') {
+                const targetName = riggedList[spinCount-1].trim().toLowerCase();
+                ti = students.findIndex(s=>s.trim().toLowerCase()===targetName);
+            }
+            if(ti===-1) ti=Math.floor(Math.random()*students.length);
+            
+            const ad=360/students.length; 
+            const tsc=(ti+0.5)*ad; 
+            const fd=270-tsc; 
+            const currentDeg = startAngle * 180 / Math.PI;
+            const rounds = 10 + Math.random() * 5; 
+            const finalAngle = currentDeg + (rounds * 360) + (fd - (currentDeg % 360));
+            
+            const startTimestamp = performance.now();
+            const duration = 4000; 
+            const startVal = startAngle;
+            const endVal = finalAngle * Math.PI / 180;
+            
+            let lastTick = -1;
+
+            function anim(now){
+                const elapsed = now - startTimestamp;
+                const progress = Math.min(elapsed / duration, 1);
+                const ease = 1 - Math.pow(1 - progress, 3);
+                
+                startAngle = startVal + (endVal - startVal) * ease;
+                drawWheel();
+                
+                const currentSlice = Math.floor(((startAngle * 180 / Math.PI) % 360) / ad);
+                if (currentSlice !== lastTick) {
+                    playSound('tick');
+                    lastTick = currentSlice;
+                }
+
+                if(progress < 1) requestAnimationFrame(anim);
+                else {
+                    isSpinning=false; 
+                    document.getElementById('spinBtn').disabled=false; 
+                    document.getElementById('spinBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+                    showResult(students[ti]);
+                }
+            }
+            requestAnimationFrame(anim);
+        }
+
+        function showResult(winner){
+            currentWinner = winner; 
+            if(!studentParticipation[winner]) studentParticipation[winner]=[]; 
+            studentParticipation[winner].push(spinCount);
+            
+            document.getElementById('spotlight').classList.add('spotlight-active'); 
+            playSound('win'); 
+            createConfetti();
+            
+            document.getElementById('winnerName').innerText = winner; 
+            document.getElementById('winnerScore').innerText = `Điểm: ${studentScores[winner]||0}`;
+            
+            document.getElementById('questionDisplayContainer').classList.add('hidden');
+            document.getElementById('questionSelectionArea').classList.remove('hidden');
+            
+            toggleModal('resultModal', true);
+            renderQuestionButtons();
+        }
+
+        function closeModal(){
+            stopTimer(); 
+            document.getElementById('spotlight').classList.remove('spotlight-active');
+            
+            if(document.getElementById('removeWinnerToggle').checked && currentWinner){ 
+                removeStudentFromList(currentWinner); 
+                currentWinner = ""; 
+            }
+            toggleModal('resultModal', false);
+        }
+
+        function removeStudentFromList(name){ 
+            const textarea = document.getElementById('studentListInput'); 
+            let list = textarea.value.split('\n');
+            const idx = list.findIndex(x => x.trim().toLowerCase() === name.trim().toLowerCase()); 
+            if(idx !== -1){ 
+                list.splice(idx,1); 
+                textarea.value = list.filter(x => x.trim() !== '').join('\n'); 
+                updateWheel(); 
+            } 
+        }
+
+        // --- QUESTION LOGIC ---
+        function handleModeChange(){ 
+            generateMathQuestions(true); 
+            const mode = document.getElementById('questionTypeSelect').value;
+            document.getElementById('modeTitle').innerText = mode === 'mc' ? 'Chọn câu hỏi Trắc Nghiệm' : 'Chọn câu hỏi Tự Luận';
+            if(mode === 'essay') showToast("📝 Đã chuyển sang chế độ Tự Luận");
+            else showToast("✅ Đã chuyển sang chế độ Trắc Nghiệm");
+        }
+
+        function openQuestionModal(){ updatePlaceholder(); updateQuestionCount(); toggleModal('manualQuestionModal',true); }
+        function closeQuestionModal(){ toggleModal('manualQuestionModal',false); }
+        
+        function saveManualQuestions(){ 
+            closeQuestionModal(); 
+            generateMathQuestions(true); 
+            showToast("Đã cập nhật câu hỏi!"); 
+        }
+
+        function updatePlaceholder(){ 
+            const type = document.getElementById('questionTypeSelect').value;
+            const guide = type === 'mc' 
+                ? `<strong>Mẫu Trắc nghiệm:</strong><br>Câu 1: Nội dung...<br>A. ...<br>B. ...<br>Đáp án: A` 
+                : `<strong>Mẫu Tự luận:</strong><br>Câu 1: Nội dung...<br>Đáp án: Nội dung trả lời...`;
+            document.getElementById('manualInstruction').innerHTML = guide;
+        }
+
+        function updateQuestionCount(){ 
+            const mode = document.getElementById('questionTypeSelect').value;
+            const text = getSegmentContent(document.getElementById('manualQuestionInput').value, mode);
+            const count = (text.match(/^(Câu|Bài|Question)\s+\d+/gmi)||[]).length; 
+            document.getElementById('questionCountBadge').innerText = `${count} câu`; 
+        }
+
+        function getSegmentContent(text, mode){ 
+            const p1 = text.toUpperCase().indexOf('PHẦN 1'); 
+            const p2 = text.toUpperCase().indexOf('PHẦN 2'); 
+            if(p1 === -1 && p2 === -1) return text; 
+            
+            if(mode === 'mc') {
+                const start = p1 !== -1 ? p1 : 0;
+                const end = p2 !== -1 ? p2 : text.length;
+                return text.substring(start, end);
+            } else {
+                return p2 !== -1 ? text.substring(p2) : "";
+            }
+        }
+
+        function generateMathQuestions(reset=false){
+            if(reset){ 
+                completedQuestions=[]; 
+                currentActiveQuestionIndex=-1; 
+            }
+            
+            const mode = document.getElementById('questionTypeSelect').value;
+            const rawText = document.getElementById('manualQuestionInput').value;
+            const segment = getSegmentContent(rawText, mode);
+            const lines = segment.split('\n');
+            
+            currentQuestions = []; 
+            let currentQ = null;
+            
+            const qStart = /^(Câu|Bài)\s+\d+/i;
+            const optStart = /^[A-D]\./i;
+            const ansStart = /^Đáp án|^Gợi ý/i;
+            const partHeader = /^PHẦN\s+\d+/i;
+
+            if(mode === 'mc'){
+                for(let line of lines){ 
+                    line = line.trim(); 
+                    if(!line) continue;
+                    if(line.match(partHeader)) continue; 
+                    
+                    if(line.match(qStart) || (currentQuestions.length===0 && !currentQ && !line.match(optStart))){ 
+                        if(currentQ) currentQuestions.push(currentQ); 
+                        currentQ = { q: line, opts: [], ans: 0 }; 
+                    } 
+                    else if(line.match(optStart)){ 
+                        if(currentQ) currentQ.opts.push(line); 
+                    } 
+                    else if(line.match(ansStart)){ 
+                        if(currentQ){ 
+                            const match = line.match(/([A-D])/i); 
+                            if(match) currentQ.ans = match[1].toUpperCase().charCodeAt(0) - 65; 
+                        } 
+                    } 
+                    else { 
+                        if(currentQ) currentQ.q += " " + line; 
+                    } 
+                }
+            } else { 
+                for(let line of lines){ 
+                    line = line.trim(); 
+                    if(!line) continue; 
+                    if(line.match(partHeader)) continue;
+                    
+                    if(line.match(qStart)){ 
+                        if(currentQ) currentQuestions.push(currentQ); 
+                        currentQ = { q: line, a: "" }; 
+                    } 
+                    else if(line.match(ansStart)){ 
+                        if(currentQ) currentQ.a = line.replace(/^Đáp án:?/i, '').trim(); 
+                    } 
+                    else { 
+                        if(currentQ){ 
+                            if(!currentQ.a) currentQ.q += " " + line; 
+                            else currentQ.a += "\n" + line; 
+                        } 
+                    } 
+                }
+            }
+            if(currentQ) currentQuestions.push(currentQ);
+            
+            renderQuestionButtons();
+        }
+
+        function renderQuestionButtons(){ 
+            const container = document.getElementById('questionButtons'); 
+            container.innerHTML=''; 
+            
+            if(currentQuestions.length === 0) {
+                container.innerHTML = '<span class="text-gray-400 text-sm">Chưa có câu hỏi cho phần này.</span>';
+                return;
+            }
+
+            currentQuestions.forEach((_, i)=>{ 
+                const btn = document.createElement('div'); 
+                btn.className = `question-card ${completedQuestions.includes(i) ? 'disabled' : ''} ${currentActiveQuestionIndex === i ? 'viewing-now' : ''}`; 
+                btn.innerText = i + 1; 
+                btn.onclick = () => { if(!completedQuestions.includes(i)) selectQuestion(i); }; 
+                container.appendChild(btn); 
+            }); 
+        }
+        
+        function selectQuestion(index){
+            completedQuestions.push(index); 
+            if(currentWinner) studentQuestionCounts[currentWinner] = (studentQuestionCounts[currentWinner]||0) + 1;
+            currentActiveQuestionIndex = index; 
+            
+            renderQuestionButtons();
+            
+            const question = currentQuestions[index];
+            const isMC = document.getElementById('questionTypeSelect').value === 'mc';
+            
+            document.getElementById('questionDisplayContainer').classList.remove('hidden');
+            document.getElementById('questionDisplayContainer').classList.add('flex'); // Enable flex logic
+            document.getElementById('timesUpOverlay').classList.add('hidden');
+            document.getElementById('essayAnswerContainer').classList.add('hidden');
+            
+            // Only show essay controls if essay mode
+            if(!isMC) document.getElementById('essayControls').classList.remove('hidden');
+            else document.getElementById('essayControls').classList.add('hidden');
+
+            // Populate Content
+            document.getElementById('questionText').innerText = question.q;
+            
+            const mcContainer = document.getElementById('mcOptions');
+            const essayArea = document.getElementById('essayArea');
+
+            if(isMC){ 
+                mcContainer.classList.remove('hidden'); 
+                mcContainer.classList.remove('answered');
+                essayArea.classList.add('hidden');
+                
+                mcContainer.innerHTML = '';
+                question.opts.forEach((opt, idx)=>{ 
+                    const div = document.createElement('div'); 
+                    div.className = 'mc-option'; 
+                    div.innerText = opt; 
+                    div.onclick = () => checkMCAnswer(div, idx, question.ans); 
+                    mcContainer.appendChild(div); 
+                }); 
+            } else { 
+                mcContainer.classList.add('hidden'); 
+                essayArea.classList.remove('hidden');
+                document.getElementById('essayAnswerText').innerText = question.a || "Chưa có đáp án gợi ý."; 
+            }
+            
+            startTimer();
+        }
+
+        function checkMCAnswer(el, idx, correctIdx){ 
+            stopTimer(); 
+            if(el.parentElement.classList.contains('answered')) return; 
+            
+            if(idx === correctIdx){ 
+                el.parentElement.classList.add('answered'); 
+                el.classList.add('mc-correct'); 
+                playSound('win'); 
+                // Removed createConfetti() here
+                addScore();
+            } else { 
+                el.classList.add('mc-wrong'); 
+                playSound('tick'); 
+            } 
+        }
+
+        function markEssayCorrect(){ 
+            stopTimer(); 
+            playSound('win'); 
+            // Removed createConfetti() here
+            addScore();
+            showToast("Đã cộng điểm!");
+        }
+
+        function addScore() {
+            if(currentWinner){ 
+                studentScores[currentWinner] = (studentScores[currentWinner]||0) + 1; 
+                document.getElementById('winnerScore').innerText = `Điểm: ${studentScores[currentWinner]}`; 
+            }
+        }
+
+        function toggleEssayAnswer(){ 
+            document.getElementById('essayAnswerContainer').classList.remove('hidden'); 
+        }
+
+        function startTimer(){ 
+            stopTimer(); 
+            let time = questionTimeLimit; 
+            const bar = document.getElementById('timerBar'); 
+            const text = document.getElementById('timeLeft'); 
+            
+            bar.style.width = '100%'; 
+            
+            timerInterval = setInterval(() => { 
+                time -= 0.1; 
+                text.innerText = Math.ceil(time); 
+                bar.style.width = `${(time / questionTimeLimit) * 100}%`; 
+                
+                if(time <= 5) bar.style.background = 'linear-gradient(90deg, #ef4444, #991b1b)';
+                else bar.style.background = 'linear-gradient(90deg, #10b981, #f59e0b, #ef4444)';
+
+                if(time <= 0){ 
+                    stopTimer(); 
+                    document.getElementById('timesUpOverlay').classList.remove('hidden'); 
+                    playSound('tick'); 
+                } 
+            }, 100); 
+        }
+        function stopTimer(){ clearInterval(timerInterval); }
+        
+        // --- UTILS ---
+        function toggleModal(id, show){ 
+            const m = document.getElementById(id); 
+            if(show){ 
+                m.classList.remove('hidden'); 
+                setTimeout(()=>m.classList.remove('opacity-0'), 10); 
+            } else { 
+                m.classList.add('opacity-0'); 
+                setTimeout(()=>m.classList.add('hidden'), 300); 
+            } 
+        }
+        
+        function openRiggingModal(){ toggleModal('riggingModal',true); } 
+        function closeRiggingModal(){ toggleModal('riggingModal',false); }
+        function saveRiggingConfig(){ 
+            riggedList = document.getElementById('riggingInput').value.split('\n'); 
+            questionTimeLimit = parseInt(document.getElementById('questionTimeInput').value) || 15; 
+            closeRiggingModal(); 
+            showToast("Đã lưu cài đặt!"); 
+        }
+
+        function openScoreboard(){ 
+            const tbody = document.getElementById('scoreboardBody'); 
+            tbody.innerHTML = ''; 
+            
+            const list = Object.keys(studentParticipation).map(n => ({
+                n, 
+                score: studentScores[n] || 0, 
+                count: studentQuestionCounts[n] || 0
+            })).sort((a,b) => b.score - a.score); 
+            
+            if(list.length === 0) document.getElementById('emptyScoreMsg').classList.remove('hidden'); 
+            else { 
+                document.getElementById('emptyScoreMsg').classList.add('hidden'); 
+                list.forEach((x, i) => { 
+                    const row = `
+                        <tr class="border-b border-gray-700 hover:bg-gray-800 transition">
+                            <td class="px-4 py-3 ${i===0 ? 'text-yellow-400 font-bold' : ''}">${i===0 ? '🥇' : i===1 ? '🥈' : i===2 ? '🥉' : i+1}</td>
+                            <td class="px-4 py-3 font-medium text-white">${x.n}</td>
+                            <td class="px-4 py-3 text-center text-gray-400">${x.count}</td>
+                            <td class="px-4 py-3 text-right text-green-400 font-bold text-lg">${x.score}</td>
+                        </tr>`;
+                    tbody.innerHTML += row; 
+                }); 
+            } 
+            toggleModal('scoreboardModal', true); 
+        }
+        function closeScoreboard(){ toggleModal('scoreboardModal',false); }
+        
+        function showToast(msg){ 
+            const t = document.getElementById('toast'); 
+            t.innerText = msg; 
+            t.classList.add('show'); 
+            setTimeout(()=>t.classList.remove('show'), 3000); 
+        }
+        
+        function createConfetti(){ 
+            const end = Date.now() + 1000; // Duration 1s
+            (function frame() { 
+                confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: themes[currentTheme].colors }); 
+                confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: themes[currentTheme].colors }); 
+                if (Date.now() < end) requestAnimationFrame(frame); 
+            }()); 
+        }
+
+        // --- INIT ---
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('manualQuestionInput').value = DEFAULT_FULL_QUESTIONS;
+            document.getElementById('questionTimeInput').value = questionTimeLimit;
+            generateMathQuestions();
+            updateWheel();
+            setupBackgroundEffect('default');
+            
+            // Init Audio Context on first click
+            document.body.addEventListener('click', initAudio, { once: true });
+        });
+    </script>
+</body>
+</html>
